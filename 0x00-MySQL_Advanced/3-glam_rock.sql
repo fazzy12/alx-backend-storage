@@ -6,5 +6,5 @@
 -- ORDER BY lifespan DESC;
 SELECT band_name, (YEAR(split) - YEAR(formed)) AS lifespan
 FROM metal_bands
-WHERE style = '%Glam rock'
+WHERE style = '%Glam rock%'
 ORDER BY lifespan DESC;
