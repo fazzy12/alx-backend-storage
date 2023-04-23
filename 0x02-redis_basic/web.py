@@ -1,54 +1,36 @@
 #!/usr/bin/env python3
 """
-Main file
+Caching request module
 """
 import redis
-
-Cache = __import__('exercise').Cache
-replay = __import__('exercise').replay
-
-cache = Cache()
+import requests
+from functools import wraps
+from typing import Callable
 
 
-data = b"hello"
-key = cache.store(data)
-print(key)
-
-local_redis = redis.Redis()
-print(local_redis.get(key))
-
-TEST_CASES = {
-    b"foo": None,
-    123: int,
-    "bar": lambda d: d.decode("utf-8")
-}
-
-for value, fn in TEST_CASES.items():
-    key = cache.store(value)
-    assert cache.get(key, fn=fn) == value
-
-cache.store(b"first")
-print(cache.get(cache.store.__qualname__))
-
-cache.store(b"second")
-cache.store(b"third")
-print(cache.get(cache.store.__qualname__))
-
-s1 = cache.store("first")
-print(s1)
-s2 = cache.store("secont")
-print(s2)
-s3 = cache.store("third")
-print(s3)
-
-inputs = cache._redis.lrange("{}:inputs".format(cache.store.__qualname__), 0, -1)
-outputs = cache._redis.lrange("{}:outputs".format(cache.store.__qualname__), 0, -1)
-
-print("inputs: {}".format(inputs))
-print("outputs: {}".format(outputs))
+def track_get_page(fn: Callable) -> Callable:
+    """ Decorator for get_page
+    """
+    @wraps(fn)
+    def wrapper(url: str) -> str:
+        """ Wrapper that:
+            - check whether a url's data is cached
+            - tracks how many times get_page is called
+        """
+        client = redis.Redis()
+        client.incr(f'count:{url}')
+        cached_page = client.get(f'{url}')
+        if cached_page:
+            return cached_page.decode('utf-8')
+        response = fn(url)
+        client.set(f'{url}', response, 10)
+        return response
+    return wrapper
 
 
-cache.store("foo")
-cache.store("bar")
-cache.store(42)
-replay(cache.store)
+@track_get_page
+def get_page(url: str) -> str:
+    """ Makes a http request to a given endpoint
+    """
+    response = requests.get(url)
+    return response.text
