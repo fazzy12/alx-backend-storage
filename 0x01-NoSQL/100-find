@@ -1,0 +1,2 @@
+//lists all documents with name starting by Holberton in the collection school
+mongo_collection.find({name: /Holberton.*/}).forEach(printjson);
