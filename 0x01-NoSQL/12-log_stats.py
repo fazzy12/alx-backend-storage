@@ -1,7 +1,12 @@
+#!/usr/bin/env python3
+""" script that provides some stats about Nginx logs stored in MongoDB:
+"""
+
 from pymongo import MongoClient
 
 def log_stats(mongo_collection):
-    # Total number of documents in the collection
+    """Total number of documents in the collection
+    """
     total_logs = mongo_collection.count_documents({})
 
     # Count of each method type
