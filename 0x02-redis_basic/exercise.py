@@ -6,6 +6,49 @@ This module defines a Cache class for interacting with a Redis database.
 import redis
 import uuid
 from typing import Union, Callable, Optional
+import functools
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    Decorator that counts the number of times a method is called.
+
+    Parameters
+    ----------
+    method : Callable
+        The method to be decorated.
+
+    Returns
+    -------
+    Callable
+        The wrapped method.
+    """
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """
+        Wrapper function to increment the call count and
+        call the original method.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class.
+        *args : tuple
+            The positional arguments for the method.
+        **kwargs : dict
+            The keyword arguments for the method.
+
+        Returns
+        -------
+        Any
+            The result of the original method call.
+        """
+        key = method.__qualname__
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 class Cache:
@@ -17,8 +60,8 @@ class Cache:
     store(data: Union[str, bytes, int, float]) -> str
         Stores data in Redis and returns the generated key.
 
-    get(key: str, fn: Optional[Callable] = None) ->
-        Union[str, bytes, int, float, None]
+    get(key: str, fn: Optional[Callable] = None)
+    -> Union[str, bytes, int, float, None]
         Retrieves data from Redis and optionally applies a conversion function.
 
     get_str(key: str) -> str
@@ -35,6 +78,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Stores the given data in Redis using a randomly generated key.
@@ -53,8 +97,8 @@ class Cache:
         self._redis.set(key, data)
         return key
 
-    def get(self, key: str, fn: Optional[Callable] =
-            None)-> Union[str, bytes, int, float, None]:
+    def get(self, key: str, fn: Optional[Callable]
+            = None) -> Union[str, bytes, int, float, None]:
         """
         Retrieves data from Redis and optionally applies a conversion function.
 
